@@ -5,7 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 
 const execPromise = promisify(exec);
 
-// 관리자 권한 검증 함수 (개선됨)
+// 관리자 권한 검증 함수
 function verifyAdmin(request) {
   const authHeader = request.headers.get("authorization");
   const adminPw = process.env.ADMIN_PW;
@@ -60,10 +60,10 @@ export async function GET(request) {
 
     console.log("Saju AI Generation starting for:", name);
 
-    // [Cache Busting] Force redeploy to clear old venv path references - 2026-05-15
+    // 1. Call Python sajupy wrapper
+    // Railway/Linux 환경 대응
     const isWin = process.platform === "win32";
     const pythonPath = isWin ? "venv\\Scripts\\python" : "python3";
-    console.log(`Debug: Running on ${process.platform}, using pythonPath: ${pythonPath}`);
     
     const calcHour = isTimeUnknown ? "0" : hour;
     const calcMinute = isTimeUnknown ? "0" : minute;
@@ -110,6 +110,7 @@ export async function GET(request) {
 
 3. [중요] '< 사주 총평 및 오행 조언 >' 섹션을 작성해주세요. 
    전체적인 사주의 흐름을 비유와 상징을 섞어 설명하되, 특히 오행의 분포(나무, 불, 흙, 금, 물)를 바탕으로 "${name} 님은 어떤 성격인지, 부족한 기운을 보완하기 위해 어떤 사람이나 물건을 가까이하면 좋은지"에 대한 조언을 한데 묶어 작성해주세요. 
+   **또한 근 5년 간 흐름과 향후 5년 간의 삶의 흐름을 언급해주세요.**
    **특히, 내용이 지나치게 긍정적이기만 하면 신뢰도가 떨어질 수 있으므로, ${name} 님이 살면서 '특히 유의해야 할 점(조심해야 할 기운이나 행동) 또는 부족한 점(채워나가야 할 점)'에 대해서도 상대방이 상처받지 않도록 다정하지만 명확하게 한 문단 포함해주세요.**
 
 4. **[매우 중요]** 사용자가 선택한 주제(**${topics}**)에 대해서만 분석을 진행하세요. 선택되지 않은 주제는 절대 언급하지 마세요.
@@ -134,12 +135,24 @@ export async function GET(request) {
 `;
 
     let text = "";
-    const modelName = "gemini-3.1-flash-lite";
-    console.log(`Calling Gemini API (${modelName})...`);
-    const model = genAI.getGenerativeModel({ model: modelName });
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    text = response.text();
+    try {
+      console.log("Calling Main Gemini API (3.1-flash-lite)...");
+      const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      text = response.text();
+    } catch (proError) {
+      console.warn("Main Gemini failed, trying Spare (2.5-flash):", proError.message);
+      try {
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        text = response.text();
+      } catch (spareError) {
+        console.error("Both Gemini models failed:", spareError.message);
+        throw spareError;
+      }
+    }
 
     // Update DB
     await supabaseAdmin.from("saju_reports").update({ report: text }).eq("id", id);
