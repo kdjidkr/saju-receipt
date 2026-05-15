@@ -4,7 +4,6 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 
 export default function AdminPrintPage({ params }) {
-  // context.params가 Promise일 수 있으므로 use()를 사용하거나 useEffect에서 처리합니다.
   const resolvedParams = use(params);
   const id = resolvedParams.id;
 
@@ -13,9 +12,17 @@ export default function AdminPrintPage({ params }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const token = localStorage.getItem("admin_token");
+    if (!token) {
+      router.push("/admin/login");
+      return;
+    }
+
     if (id) {
-      console.log(`Fetching report for ID: ${id}`);
-      fetch(`/api/admin/reports/${id}`)
+      console.log(`Fetching report for ID: ${id} with Auth`);
+      fetch(`/api/admin/reports/${id}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      })
         .then(res => res.json())
         .then(data => {
           if (data.report) {
@@ -47,7 +54,7 @@ export default function AdminPrintPage({ params }) {
   if (!reportData) {
     return (
       <div className="container">
-        <div className="pixel-card" style={{ textAlign: 'center' }}>
+        <div className="pixel-card no-print" style={{ textAlign: 'center' }}>
           <p style={{ marginBottom: '20px' }}>레포트를 찾을 수 없습니다. (ID: {id})</p>
           <button onClick={() => router.back()} className="pixel-button cyan">뒤로가기</button>
         </div>

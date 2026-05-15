@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -15,13 +15,13 @@ export async function GET(request) {
   const topics = searchParams.get("topics") || "추천";
 
   try {
-    if (!supabase) {
+    if (!supabaseAdmin) {
       throw new Error("Supabase is not configured");
     }
 
     console.log("Saving saju request for:", name);
     
-    const { data, error: saveError } = await supabase
+    const { data, error: saveError } = await supabaseAdmin
       .from("saju_reports")
       .insert([{
         name,

@@ -24,7 +24,10 @@ export default function AdminDashboard() {
 
   const fetchReports = async () => {
     try {
-      const response = await fetch("/api/admin/reports");
+      const token = localStorage.getItem("admin_token");
+      const response = await fetch("/api/admin/reports", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
       const data = await response.json();
       if (data.reports) {
         setReports(data.reports);
@@ -39,7 +42,10 @@ export default function AdminDashboard() {
   const handleGenerate = async (id) => {
     setProcessingId(id);
     try {
-      const response = await fetch(`/api/saju?id=${id}`);
+      const token = localStorage.getItem("admin_token");
+      const response = await fetch(`/api/saju?id=${id}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
       if (response.ok) {
         await fetchReports(); // Refresh data
       } else {
@@ -57,8 +63,10 @@ export default function AdminDashboard() {
     if (!confirm("정말 삭제하시겠습니까?")) return;
 
     try {
+      const token = localStorage.getItem("admin_token");
       const response = await fetch(`/api/admin/reports?id=${id}`, {
         method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
       });
       if (response.ok) {
         setReports(reports.filter(r => r.id !== id));

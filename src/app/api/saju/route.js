@@ -1,75 +1,75 @@
 import { exec } from "child_process";
 import { promisify } from "util";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase";
 
 const execPromise = promisify(exec);
 
+// 관리자 권한 검증 함수 (개선됨)
+function verifyAdmin(request) {
+  const authHeader = request.headers.get("authorization");
+  const adminPw = process.env.ADMIN_PW;
+  if (!adminPw) return false;
+  const expectedToken = Buffer.from(`auth_${adminPw}`).toString('base64');
+  
+  if (!authHeader || authHeader !== `Bearer ${expectedToken}`) {
+    return false;
+  }
+  return true;
+}
+
 export async function GET(request) {
+  // [보안 강화] 모든 AI 생성 요청은 반드시 관리자 인증이 필요함
+  if (!verifyAdmin(request)) {
+    console.warn("Unauthorized AI Generation attempt blocked.");
+    return new Response(JSON.stringify({ error: "Unauthorized. Admin access required." }), { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
   
+  if (!id) {
+    return new Response(JSON.stringify({ error: "ID is required for report generation." }), { status: 400 });
+  }
+
   let name, year, month, day, hour, minute, calendarType, isLeapMonth, isTimeUnknown, gender, topics;
 
   try {
-    if (id) {
-      // 0. If ID is provided, fetch from DB first
-      console.log(`Fetching existing record for ID: ${id}`);
-      const { data: existing, error: fetchError } = await supabase
-        .from("saju_reports")
-        .select("*")
-        .eq("id", id)
-        .single();
+    console.log(`Fetching record for ID: ${id} using Admin Client`);
+    const { data: existing, error: fetchError } = await supabaseAdmin
+      .from("saju_reports")
+      .select("*")
+      .eq("id", id)
+      .single();
 
-      if (fetchError || !existing) {
-        throw new Error("Record not found");
-      }
-
-      name = existing.name;
-      year = existing.year;
-      month = existing.month;
-      day = existing.day;
-      hour = existing.hour || "0";
-      minute = existing.minute || "0";
-      calendarType = existing.calendar_type;
-      isLeapMonth = existing.is_leap_month;
-      isTimeUnknown = existing.is_time_unknown;
-      gender = existing.gender;
-      topics = existing.topics || "추천";
-    } else {
-      // Fallback to query params
-      name = searchParams.get("name");
-      year = searchParams.get("year");
-      month = searchParams.get("month");
-      day = searchParams.get("day");
-      hour = searchParams.get("hour");
-      minute = searchParams.get("minute");
-      calendarType = searchParams.get("calendarType") || "solar";
-      isLeapMonth = searchParams.get("isLeapMonth") === "true";
-      isTimeUnknown = searchParams.get("isTimeUnknown") === "true";
-      gender = searchParams.get("gender") === "1" ? "남성" : "여성";
-      topics = searchParams.get("topics") || "추천";
+    if (fetchError || !existing) {
+      throw new Error("Record not found");
     }
 
-    console.log("Saju API starting for:", name);
+    name = existing.name;
+    year = existing.year;
+    month = existing.month;
+    day = existing.day;
+    hour = existing.hour || "0";
+    minute = existing.minute || "0";
+    calendarType = existing.calendar_type;
+    isLeapMonth = existing.is_leap_month;
+    isTimeUnknown = existing.is_time_unknown;
+    gender = existing.gender;
+    topics = existing.topics || "추천";
+
+    console.log("Saju AI Generation starting for:", name);
 
     // 1. Call Python sajupy wrapper
     const pythonPath = process.platform === "win32" ? "venv\\Scripts\\python" : "venv/bin/python";
     const calcHour = isTimeUnknown ? "0" : hour;
     const calcMinute = isTimeUnknown ? "0" : minute;
 
-    console.log("Running saju_wrapper.py...");
     const { stdout, stderr } = await execPromise(`${pythonPath} saju_wrapper.py ${year} ${month} ${day} ${calcHour} ${calcMinute} ${calendarType} ${isLeapMonth}`);
-
-    if (stderr) {
-      console.error("Python Error:", stderr);
-    }
     const sajuInfo = JSON.parse(stdout);
-    console.log("Saju calculation complete.");
 
     // 2. Prepare Gemini
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
     const prompt = `
 사용자 정보:
 이름: ${name}
@@ -131,60 +131,15 @@ export async function GET(request) {
 `;
 
     let text = "";
-    try {
-      console.log("Calling Main Gemini API (3.1-flash-lite)...");
-      const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      text = response.text();
-      console.log("Gemini generation complete.");
-    } catch (proError) {
-      console.warn("Main Gemini failed, trying Spare (2.5-flash):", proError.message);
-      try {
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        text = response.text();
-        console.log("Spare Gemini generation complete.");
-      } catch (spareError) {
-        console.error("Both Gemini models failed:", spareError.message);
-        throw spareError;
-      }
-    }
+    const modelName = "gemini-3.1-flash-lite";
+    console.log(`Calling Gemini API (${modelName})...`);
+    const model = genAI.getGenerativeModel({ model: modelName });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    text = response.text();
 
-    // 3. Update DB if ID was provided, else Insert
-    if (supabase) {
-      if (id) {
-        console.log(`Updating report for ID: ${id}`);
-        const { error: updateError } = await supabase
-          .from("saju_reports")
-          .update({ report: text })
-          .eq("id", id);
-          
-        if (updateError) throw updateError;
-      } else {
-        console.log("Saving new record to Supabase...");
-        const { error: saveError } = await supabase
-          .from("saju_reports")
-          .insert([{
-            name,
-            year,
-            month,
-            day,
-            hour: isTimeUnknown ? null : hour,
-            minute: isTimeUnknown ? null : minute,
-            is_time_unknown: isTimeUnknown,
-            calendar_type: calendarType,
-            is_leap_month: isLeapMonth,
-            gender,
-            topics,
-            report: text
-          }]);
-
-        if (saveError) throw saveError;
-      }
-      console.log("Supabase operation successful.");
-    }
+    // Update DB
+    await supabaseAdmin.from("saju_reports").update({ report: text }).eq("id", id);
 
     return new Response(JSON.stringify({ report: text }), {
       status: 200,
@@ -192,10 +147,7 @@ export async function GET(request) {
     });
 
   } catch (error) {
-    console.error("API Error Detailed:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    console.error("AI Generation Error:", error);
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 }
