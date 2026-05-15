@@ -34,7 +34,7 @@ h1,
 h2,
 h3,
 .pixel-font {
-  font-family: 'Press Start 2P', cursive;
+  font-family: 'Press Start 2P', 'Gaegu', cursive;
   line-height: 1.5;
 }
 
@@ -55,8 +55,9 @@ h3,
   background-color: var(--accent-color);
   border: var(--pixel-border);
   padding: 15px 25px;
-  font-family: 'Press Start 2P', cursive;
-  font-size: 14px;
+  font-family: 'Press Start 2P', 'Gaegu', cursive;
+  font-size: 17px;
+  font-weight: bold;
   cursor: pointer;
   box-shadow: 6px 6px 0px #000;
   transition: all 0.1s;
@@ -256,7 +257,7 @@ h3,
 }
 
 .progress-text {
-  font-family: 'Press Start 2P', cursive;
+  font-family: 'Press Start 2P', 'Gaegu', cursive;
   font-size: 10px;
   margin-top: 10px;
 }
