@@ -61,7 +61,10 @@ export async function GET(request) {
     console.log("Saju AI Generation starting for:", name);
 
     // 1. Call Python sajupy wrapper
-    const pythonPath = process.platform === "win32" ? "venv\\Scripts\\python" : "venv/bin/python";
+    // Railway/Linux 환경에서는 'python3'를 사용하고, 로컬 Windows에서는 'venv' 경로 사용
+    const isWin = process.platform === "win32";
+    const pythonPath = isWin ? "venv\\Scripts\\python" : "python3";
+    
     const calcHour = isTimeUnknown ? "0" : hour;
     const calcMinute = isTimeUnknown ? "0" : minute;
 
