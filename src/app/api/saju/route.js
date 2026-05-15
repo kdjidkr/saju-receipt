@@ -143,8 +143,8 @@ export async function GET(request) {
 
     let text = "";
     try {
-      console.log("Calling Main Gemini API (3.1-pro-preview)...");
-      const model = genAI.getGenerativeModel({ model: "gemini-3.1-pro-preview" });
+      console.log("Calling Main Gemini API (3-flash-preview)...");
+      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
       const result = await model.generateContent(prompt);
       const response = await result.response;
       text = response.text();
