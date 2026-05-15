@@ -143,15 +143,15 @@ export async function GET(request) {
 
     let text = "";
     try {
-      console.log("Calling Main Gemini API (3.1-flash-lite)...");
-      const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
+      console.log("Calling Main Gemini API (3.1-pro-preview)...");
+      const model = genAI.getGenerativeModel({ model: "gemini-3.1-pro-preview" });
       const result = await model.generateContent(prompt);
       const response = await result.response;
       text = response.text();
     } catch (proError) {
-      console.warn("Main Gemini failed, trying Spare (2.5-flash):", proError.message);
+      console.warn("Main Gemini failed, trying Spare (3.1-flash-lite):", proError.message);
       try {
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
         const result = await model.generateContent(prompt);
         const response = await result.response;
         text = response.text();
