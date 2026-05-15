@@ -1,1 +1,3 @@
-sajupy==0.1.2
+sajupy==0.2.0
+pandas
+geopy
