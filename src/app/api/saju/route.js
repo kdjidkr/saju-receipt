@@ -11,7 +11,7 @@ function verifyAdmin(request) {
   const adminPw = process.env.ADMIN_PW;
   if (!adminPw) return false;
   const expectedToken = Buffer.from(`auth_${adminPw}`).toString('base64');
-  
+
   if (!authHeader || authHeader !== `Bearer ${expectedToken}`) {
     return false;
   }
@@ -27,7 +27,7 @@ export async function GET(request) {
 
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
-  
+
   if (!id) {
     return new Response(JSON.stringify({ error: "ID is required for report generation." }), { status: 400 });
   }
@@ -64,7 +64,7 @@ export async function GET(request) {
     // Railway/Linux 환경 대응
     const isWin = process.platform === "win32";
     const pythonPath = isWin ? "venv\\Scripts\\python" : "python3";
-    
+
     const calcHour = isTimeUnknown ? "0" : hour;
     const calcMinute = isTimeUnknown ? "0" : minute;
 
@@ -118,8 +118,9 @@ export async function GET(request) {
    - 모든 내용은 **부드러운 내러티브(이야기 방식)**로만 작성하세요. **절대로 '1.', '-', '•' 같은 개조식이나 글머리 기호를 사용하지 마세요.**
    - **[형식 엄수]** 각 주제 시작 시 반드시 **< ${name} 님의 주제명 분석 >** 형태의 말머리를 사용하고, **반드시 줄바꿈(Enter)을 한 번 한 뒤에** 본문 내용을 시작하세요.
    - 분석 가이드라인:
+    * 공통 사항 : 안정적이고 뻔한, 듣기 좋은 말을 하기 보단, 개인의 사주적 특성을 적극 반영하여 말할 것
      - **연애운(love)**: < ${name} 님의 연애운 분석 > 말머리로 시작. 타고난 연애 스타일과 매력, 그리고 **2026년부터 향후 5년 중 가장 큰 애정의 기운이 들어오는 '황금기'가 언제인지 집중적으로 분석하고, 5년 전체의 전반적인 흐름을 설명해주세요. 또한 ${name} 님과 사주적으로 기운이 잘 맞는 '찰떡궁합'인 사람의 특징(성격, 오행 등)을 구체적으로 언급해주세요.**
-     - **재물운(wealth)**: < ${name} 님의 재물운 분석 > 말머리로 시작. **본인의 기운(일간 등)에 의거하여 어떤 '재물 관리 및 축적 스타일'을 가졌는지 먼저 설명하고, 이를 바탕으로 현재 나이 기준 향후 50년간(10년 단위 5단계)의 장기 재운 로드맵을 흐름 위주로 풀어내주세요.**
+     - **재물운(wealth)**: < ${name} 님의 재물운 분석 > 말머리로 시작. **본인의 기운(일간 등)에 의거하여 어떤 '재물 관리 및 축적 스타일'을 가졌는지 먼저 설명하고, 이를 바탕으로 현재 나이 기준 향후 50년간(10년 단위 5단계)의 흐름 위주로 풀어내주세요.**
      - **직장운(career)**: < ${name} 님의 직장운 분석 > 말머리로 시작. **본인의 타고난 기운을 바탕으로 가장 잠재력을 발휘할 수 있는 직무와 직업군을 구체적으로 추천해주세요. 또한 직장 생활에서의 본인만의 뚜렷한 강점과 보완해야 할 약점을 분석하고, 이를 바탕으로 업무 시 조심해야 할 점이나 시너지가 나는 동료(귀인)의 특징을 심도 있게 다뤄주세요.**
      - **건강운(health)**: < ${name} 님의 건강운 분석 > 말머리로 시작. **전체적인 사주 오행의 균형을 진단하고, 이를 바탕으로 본인이 선천적으로 다소 약하거나 보완해야 할 신체 부위를 정확히 짚어주세요. 더불어 현재 나이 기준 향후 50년간(10년 단위 5단계)의 건강 흐름을 설명하면서, 각 시기별로 특히 컨디션 관리에 유의해야 할 점을 다정하면서도 경각심을 줄 수 있는 어조로 조언해주세요.**
      - **학업운(academic)**: < ${name} 님의 학업운 분석 > 말머리로 시작. **본인의 학습 성향(예: 몰입형/분산형, 이론/실습 선호 등)과 타고난 집중력의 특징을 분석하고, 이를 바탕으로 가장 효과적인 학습 전략과 시간 관리법을 제시해주세요. 또한 ${name} 님의 학업 능률을 최고로 끌어올릴 수 있는 '최적의 공부 환경'과 집중력 향상에 도움이 되는 구체적인 환경적 요인(소음, 조명, 공간 배치 등)에 대해 조언해주세요.**
